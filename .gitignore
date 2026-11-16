@@ -1,0 +1,15 @@
+# Secrets
+.env
+.env.*
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+
+# Dataset and embeddings
+data/
+embeddings/
+
+# Local configuration
+.vscode/
