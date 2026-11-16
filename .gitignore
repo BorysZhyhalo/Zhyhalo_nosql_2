@@ -13,3 +13,6 @@ embeddings/
 
 # Local configuration
 .vscode/
+
+arxiv-metadata-oai-snapshot.json
+*.zip
