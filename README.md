@@ -2,86 +2,60 @@
 
 ### 1.1 Dataset Preparation
 
-The project uses a reproducible sample of 5,000 scientific papers from the [arXiv Dataset](https://www.kaggle.com/datasets/Cornell-University/arxiv). Reservoir sampling (`seed=42`) was applied to avoid selecting only older publications from the beginning of the dataset.
+A reproducible sample of **5,000 arXiv papers** was selected using reservoir sampling (`seed=42`) from the [arXiv Dataset](https://www.kaggle.com/datasets/Cornell-University/arxiv).
 
-- Valid records scanned: **3,252,452**
-- Selected papers: **5,000**
-- Unique paper IDs: **5,000**
-- Missing abstracts: **0**
-- Publication years: **1991–2026**
-- Recent `cs.LG` papers (2021+): **197**
+- Valid records scanned: 3,252,452
+- Selected papers: 5,000 (all unique, no missing abstracts)
+- Publication years: 1991–2026
+- Recent `cs.LG` papers (2021+): 197
+- Output: `data/arxiv_subset.parquet`
 
-The cleaned dataset is saved to `data/arxiv_subset.parquet`.
+### 1.2 Tool Selection
 
-### 1.2 Tool Selection — Theoretical Questions
-
-#### Q1. How do Pinecone, Qdrant, and Chroma differ?
+#### Q1. Pinecone vs Qdrant vs Chroma
 
 | Criterion | Pinecone | Qdrant | Chroma |
 |---|---|---|---|
-| Deployment | Fully managed cloud | Self-hosted or managed cloud | Embedded, self-hosted server, cloud offerings |
+| Deployment | Managed cloud | Self-hosted / Cloud | Embedded / Server / Cloud |
 | License | Proprietary | Apache 2.0 | Apache 2.0 |
-| Main advantage | Minimal infrastructure management | Deployment control, flexible filtering, hybrid search | Simple integration and rapid prototyping |
-| Main trade-off | Vendor lock-in and usage costs | Operational overhead when self-hosted | Embedded deployments have scalability limitations |
-| Preferred use | Managed production search | Enterprise search requiring infrastructure control | Local RAG experiments and small prototypes |
+| Strength | Minimal maintenance | Control, filtering, hybrid search | Easy prototyping |
+| Trade-off | Cost, vendor lock-in | Self-hosting overhead | Embedded scalability |
+| Best use | Managed production search | Enterprise self-hosted search | Local RAG / PoC |
 
-**My assessment:** I would choose **Pinecone** when fast deployment and minimal infrastructure maintenance are priorities. Its main trade-offs are vendor dependency, usage-based costs, and less low-level control. **Qdrant** would be my choice for enterprise applications requiring flexible metadata filtering, hybrid search, or self-hosted deployment. Its managed cloud option can also reduce operational overhead. **Chroma** is particularly attractive for learning, prototyping, and local RAG development because it can run directly within an application. However, scalability and performance must be evaluated for the selected deployment mode and workload. There is no universal performance winner without comparable benchmarks.
+**My assessment:** I would choose **Pinecone** for production search with minimal infrastructure management, **Qdrant** when deployment control and advanced filtering are priorities, and **Chroma** for rapid local development. Performance depends on workload and deployment configuration.
 
 #### Q2. Why SPECTER2 instead of all-MiniLM-L6-v2?
 
-SPECTER2 was designed for **scientific document representations**, making it a domain-specific choice for searching arXiv publications. Its base model was trained on scientific citation relationships and subsequently combined with task-specific adapters trained on SciRepEval tasks.
+[SPECTER2](https://huggingface.co/allenai/specter2_base) specializes in scientific document representations using citation relationships and SciRepEval tasks. Its supported task formats include **Classification, Regression, Proximity (Retrieval), and Adhoc Search**.
 
-According to the [official SPECTER2 model card](https://huggingface.co/allenai/specter2_base), the supported training task formats include **Classification, Regression, Proximity (Retrieval), and Adhoc Search**.
+Unlike the general-purpose [all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2) (384 dimensions), SPECTER2 produces 768-dimensional representations and is designed for scientific text. However, retrieval quality still requires evaluation.
 
-In comparison, [all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2) is a general-purpose sentence embedding model producing 384-dimensional vectors. It is smaller and typically more computationally efficient, but it is not specifically optimized for scientific publication representations.
-
-SPECTER2 produces 768-dimensional representations and offers domain specialization. However, its actual retrieval quality should be validated experimentally rather than assumed to be better for every query.
-
-**Implementation note:** This assignment uses `allenai/specter2_base` through Sentence Transformers. Since the model does not provide a native Sentence Transformers configuration, the library initializes mean pooling automatically. The official SPECTER2 implementation uses CLS-token representations and supports task-specific adapters. This difference is a limitation of the educational implementation.
+**Implementation note:** Sentence Transformers automatically applies mean pooling to `specter2_base`, while the official SPECTER2 implementation uses CLS pooling and task-specific adapters.
 
 #### Q3. Which similarity metric should be used?
 
-The [SPECTER2 model card](https://huggingface.co/allenai/specter2_base) does not explicitly prescribe a single similarity metric. For this project, **cosine similarity** was selected because the embeddings are L2-normalized.
+The SPECTER2 model card does not explicitly require one similarity metric. **Cosine similarity** was selected because the embeddings are L2-normalized. It measures vector orientation independently of magnitude, making it suitable for semantic similarity.
 
-Cosine similarity measures the angle between vectors independently of their magnitude. This is suitable when semantic orientation matters more than vector length.
-
-Selecting the appropriate metric when creating the Pinecone index is important because it determines how vectors are scored and ranked. The metric should be consistent with the embedding model and the intended retrieval behavior.
+The Pinecone index metric must match the intended embedding comparison and ranking behavior.
 
 ### 1.3 Embedding Generation
 
-Scientific papers were encoded using the format:
-
-`title + " [SEP] " + abstract`
-
-The embeddings were generated with `allenai/specter2_base`, using batched processing and L2 normalization.
+Texts were encoded as `title + " [SEP] " + abstract` using `allenai/specter2_base`, batch processing, and L2 normalization.
 
 | Metric | Result |
 |---|---|
 | Papers processed | 5,000 |
-| Embedding dimensions | 768 |
-| Output shape | `(5000, 768)` |
-| First embedding L2 norm | 1.000000 |
-| Processing time | Approximately 44 minutes |
-| Output file | `embeddings/embeddings.npy` |
+| Embedding shape | `(5000, 768)` |
+| First vector L2 norm | 1.000000 |
+| Processing time | ~44 minutes |
+| Output | `embeddings/embeddings.npy` |
 
 **Execution evidence:**
 
 ![Embedding generation output](output/02_embed.py.png)
 
+#### Why are cosine similarity and dot product equivalent for normalized embeddings?
 
+Cosine similarity is the dot product divided by both vector lengths. With L2-normalized embeddings, both lengths equal 1, so **cosine similarity equals dot product**.
 
-#### Why is cosine similarity equivalent to dot product for normalized embeddings?
-
-Cosine similarity measures the angle between two vectors, while dot product also depends on their magnitudes.
-
-When embeddings are L2-normalized, each vector has a length of 1. Therefore, the cosine similarity formula simplifies to the dot product because the normalization factor equals 1.
-
-As a result, cosine similarity and dot product produce equivalent similarity scores and rankings for normalized embeddings, apart from minor floating-point differences.
-
-**Conclusion:** Normalization makes vector comparisons independent of magnitude and ensures consistent similarity rankings.
-
-
-This means cosine similarity and dot product produce the same
-similarity scores and rankings for unit-length vectors, apart
-from minor floating-point differences.
-
+Therefore, both metrics produce identical rankings for normalized vectors, apart from minor floating-point differences.
