@@ -86,3 +86,42 @@ The uploaded vector count matches the number of source articles. Metadata enable
 
 ![Pinecone upload results](output/03_load_to_pinecone.png)
 
+## Part 3 — Semantic Search and Similarity Metrics
+
+### Implementation
+
+Implemented semantic search with Pinecone and `allenai/specter2_base`, including metadata filtering by publication year and category.
+
+Compared three similarity metrics locally using normalized embeddings: cosine similarity, dot product, and Euclidean (L2) distance.
+
+### Results
+
+| Experiment | Result |
+|---|---|
+| Semantic search | Top-5 papers retrieved |
+| Recent `cs.LG` papers (2022+) | 5 matching results |
+| Older papers (before 2015) | 5 matching results |
+| Cosine vs Dot Product | Identical Top-5 |
+| Cosine vs L2 | Identical Top-5 |
+
+For the query *"teaching machines to recognize objects in pictures"*, the top result was a paper about neural visual recognition (score: 0.8602).
+
+Metadata filtering successfully restricted the results by category and publication year. Local similarity calculations produced identical rankings across all three metrics.
+
+### Theoretical Questions
+
+**Q1. Do cosine and dot product return the same Top-5?**
+
+Yes. All embeddings were L2-normalized, so cosine similarity equals dot product. Both metrics returned identical Top-5 rankings.
+
+**Q2. Do L2 results differ? Why?**
+
+No. For unit-length vectors, squared Euclidean distance equals `2 - 2 × cosine_similarity`. Therefore, minimizing L2 distance is equivalent to maximizing cosine similarity, resulting in the same ranking.
+
+**Q3. What happens without normalization?**
+
+Without normalization, dot product becomes sensitive to vector magnitude, potentially producing different rankings from cosine similarity. Euclidean distance also depends on magnitude, so the equivalence between all three ranking methods no longer holds.
+
+### Execution Evidence
+
+Full search output: `output/04_search_log.txt`
