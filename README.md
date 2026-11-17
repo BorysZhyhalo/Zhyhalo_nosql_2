@@ -52,7 +52,7 @@ Texts were encoded as `title + " [SEP] " + abstract` using `allenai/specter2_bas
 
 **Execution evidence:**
 
-![Embedding generation output](output/02_embed.py.png)
+![Embedding generation output](output/02_embed.png)
 
 #### Why are cosine similarity and dot product equivalent for normalized embeddings?
 
