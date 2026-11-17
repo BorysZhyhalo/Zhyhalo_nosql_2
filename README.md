@@ -202,3 +202,47 @@ With `k=60`, differences between individual ranks have a smaller impact, favorin
 ### Execution Evidence
 
 Full output: `output/06_hybrid_search_log.txt`
+
+## Part 6 — Analysis & Conclusions
+
+### Q1. Semantic Search vs Keyword Search
+
+Semantic search is effective for natural-language queries, paraphrases, and related concepts, while BM25 works better for exact terms, technical identifiers, and author names.
+
+In our experiments, vector search retrieved papers about depression, happiness, and sentiment for the query about understanding human emotions from text. BM25 mainly relied on matching words. Hybrid search combined both approaches through RRF, but did not consistently produce more relevant results.
+
+**Conclusion:** Use semantic search for conceptual similarity, BM25 for exact terminology, and hybrid retrieval when both types of relevance matter. Actual quality should be validated against a relevance-labeled evaluation dataset.
+
+### Q2. Impact of Chunk Size
+
+Very small chunks (10–15 words) may lose essential context and produce ambiguous embeddings. Very large chunks (500+ words) may combine unrelated ideas, reduce retrieval precision, and exceed the embedding model's token limit.
+
+Our experiment compared 100-word fixed-size chunks with 20-word overlap against sentence-aware chunks. The sentence-aware strategy preserved sentence boundaries and produced shorter chunks on average (75.3 vs 91.6 words).
+
+**Conclusion:** There is no universally optimal chunk size. It depends on document structure, embedding model, retrieval task, and evaluation results. Overlap improves boundary coverage but increases storage and embedding costs.
+
+### Q3. Euclidean Distance vs Cosine Similarity
+
+For L2-normalized vectors, cosine similarity, dot product, and Euclidean distance produce equivalent rankings.
+
+The mathematical relationship for unit-length vectors is:
+
+`squared_L2_distance = 2 - 2 * cosine_similarity`
+
+Therefore, maximizing cosine similarity is equivalent to minimizing Euclidean distance.
+
+Creating a Pinecone index with the `euclidean` metric instead of `cosine` would not change the ideal nearest-neighbor ranking for our normalized embeddings, although reported scores would differ. Small numerical or approximate-search differences are still possible.
+
+Without normalization, this equivalence no longer holds because vector magnitude affects dot product and Euclidean distance.
+
+### Q4. Pinecone Starter Limitations and Scaling
+
+Pinecone Starter is suitable for small educational datasets but has limits on available resources, storage, requests, and deployment options.
+
+Our experiments successfully indexed 5,000 scientific papers and created two additional indexes containing 120 fixed-size and 122 sentence-aware chunks. We did not encounter capacity limitations during these operations.
+
+For 10 million papers, I would use a production-scale deployment, batch or parallel ingestion, metadata filtering, and incremental updates. I would also evaluate index capacity, retrieval latency, storage costs, embedding generation costs, and retrieval quality.
+
+At 768 dimensions and float32 precision, 10 million raw embeddings alone require approximately 30.7 GB (28.6 GiB), excluding index structures, metadata, replicas, and other overhead.
+
+**Conclusion:** The experiments demonstrate the complete semantic retrieval pipeline, but production scalability and quality require additional benchmarking, monitoring, and cost optimization.
