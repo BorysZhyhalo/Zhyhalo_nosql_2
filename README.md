@@ -59,3 +59,30 @@ Texts were encoded as `title + " [SEP] " + abstract` using `allenai/specter2_bas
 Cosine similarity is the dot product divided by both vector lengths. With L2-normalized embeddings, both lengths equal 1, so **cosine similarity equals dot product**.
 
 Therefore, both metrics produce identical rankings for normalized vectors, apart from minor floating-point differences.
+
+## Part 2 — Pinecone Index & Metadata Upload
+
+### Implementation
+
+Created the `arxiv-papers` Pinecone serverless index with **768 dimensions** and the `cosine` similarity metric.
+
+Uploaded embeddings in batches of 100 using `upsert()`. Each vector includes a unique ID and metadata: arXiv ID, title, truncated abstract, authors, publication year, and primary category.
+
+### Results
+
+| Metric | Result |
+|---|---|
+| Index | `arxiv-papers` |
+| Dimensions | 768 |
+| Similarity metric | Cosine |
+| Vectors uploaded | 5,000 |
+| Batch size | 100 |
+| Upload batches | 50 |
+| Final index count | 5,000 |
+
+The uploaded vector count matches the number of source articles. Metadata enables filtering by publication year and research category in subsequent searches.
+
+### Execution Evidence
+
+![Pinecone upload results](output/03_load_to_pinecone.png)
+
