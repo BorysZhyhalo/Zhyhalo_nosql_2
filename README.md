@@ -125,3 +125,46 @@ Without normalization, dot product becomes sensitive to vector magnitude, potent
 ### Execution Evidence
 
 Full search output: `output/04_search_log.txt`
+
+## Part 4 — Chunking Strategies
+
+### Implementation
+
+Selected the 30 papers with the longest abstracts (294–338 words) and compared two chunking strategies:
+
+- **Fixed-size:** 100-word chunks with 20-word overlap.
+- **Sentence-aware semantic:** groups complete sentences into chunks of up to 100 words.
+
+Generated normalized SPECTER2 embeddings and uploaded the chunks into separate Pinecone indexes.
+
+### Results
+
+| Metric | Fixed-size | Semantic |
+|---|---:|---:|
+| Chunks | 120 | 122 |
+| Average length | 91.6 words | 75.3 words |
+| Maximum length | 100 words | 100 words |
+| Pinecone vectors | 120 | 122 |
+| Search | Top-5 returned | Top-5 returned |
+
+Both strategies successfully retrieved relevant chunks. For the microgravity heat pipe query, the top similarity scores were **0.9273 (fixed)** and **0.9533 (semantic)**. This is an individual example, not proof of overall retrieval superiority.
+
+### Theoretical Questions
+
+**Q1. Which strategy produces more meaningful chunks?**
+
+Sentence-aware chunking generally preserves context better because it avoids splitting sentences. Fixed-size chunking provides more uniform lengths but can interrupt ideas. Our experiments showed comparable retrieval results, with some higher scores for sentence-aware chunks.
+
+**Q2. How do split sentences affect embeddings?**
+
+Fixed-size chunking may break sentences, removing important context and reducing embedding quality. Sentence-aware chunking avoids most such splits, except when individual sentences exceed the maximum length.
+
+**Q3. How does overlap affect chunk count and coverage?**
+
+Overlap repeats text between neighboring chunks, improving context preservation near boundaries. However, larger overlap increases the number of chunks, storage requirements, and embedding costs. Our fixed-size strategy used 20-word overlap, while sentence-aware chunking used none.
+
+### Execution Evidence
+
+![Chunking results](output/05_chunking.png)
+
+Full output: `output/05_chunking_log.txt`
