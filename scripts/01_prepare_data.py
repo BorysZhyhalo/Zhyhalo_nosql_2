@@ -1,7 +1,9 @@
 
 import json
-from pathlib import Path
+import random
 import pandas as pd
+
+from pathlib import Path
 from tqdm import tqdm
 
 
@@ -47,16 +49,16 @@ def format_authors(paper: dict) -> str:
     return (paper.get("authors") or "").replace("\n", " ").strip()
 
 
+
 def main():
     OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
 
+    rng = random.Random(42)
     records = []
+    valid_count = 0
 
     with INPUT_FILE.open("r", encoding="utf-8") as file:
-        for line in tqdm(file, desc="Reading arXiv JSONL"):
-            if len(records) >= MAX_RECORDS:
-                break
-
+        for line in tqdm(file, desc="Sampling arXiv JSONL"):
             if not line.strip():
                 continue
 
@@ -70,30 +72,59 @@ def main():
 
             categories = (paper.get("categories") or "unknown").split()
 
-            records.append({
+            record = {
                 "id": paper["id"],
                 "title": title,
                 "abstract": abstract,
                 "authors": format_authors(paper),
                 "year": extract_year(paper),
                 "category": categories[0] if categories else "unknown",
-            })
+            }
+
+            valid_count += 1
+
+            if len(records) < MAX_RECORDS:
+                records.append(record)
+            else:
+                j = rng.randrange(valid_count)
+                if j < MAX_RECORDS:
+                    records[j] = record
+
+    if len(records) != MAX_RECORDS:
+        raise ValueError(
+            f"Expected {MAX_RECORDS} records, got {len(records)}"
+        )
 
     df = pd.DataFrame(records)
+    df = df.sort_values("id").reset_index(drop=True)
 
-    if len(df) != MAX_RECORDS:
-        raise ValueError(
-            f"Expected {MAX_RECORDS} records, found {len(df)}"
-        )
+    if df["id"].nunique() != len(df):
+        raise ValueError("Duplicate arXiv IDs detected")
 
     df.to_parquet(OUTPUT_FILE, index=False)
 
-    print(f"\nTotal records: {len(df)}")
+    print(f"\nValid records scanned: {valid_count}")
+    print(f"Selected records: {len(df)}")
     print(f"Unique IDs: {df['id'].nunique()}")
     print(f"Missing abstracts: {df['abstract'].eq('').sum()}")
-    print(f"\nTop categories:\n{df['category'].value_counts().head(10)}")
+
+    print("\nTop categories:")
+    print(df["category"].value_counts().head(10))
+
+    print("\nYear distribution:")
+    print(df["year"].value_counts().sort_index().tail(10))
+
     print(f"\nYear range: {df['year'].min()} - {df['year'].max()}")
+    print(
+        "Recent cs.LG papers:",
+        len(df[
+            (df["year"] >= 2021) &
+            (df["category"] == "cs.LG")
+        ])
+    )
+
     print(f"\nSaved to: {OUTPUT_FILE}")
+
 
 
 if __name__ == "__main__":
