@@ -69,35 +69,19 @@ The embeddings were generated with `allenai/specter2_base`, using batched proces
 ![Embedding generation output](output/02_embed.py.png)
 
 
+
 #### Why is cosine similarity equivalent to dot product for normalized embeddings?
 
-Cosine similarity is defined as:
+Cosine similarity measures the angle between two vectors, while dot product also depends on their magnitudes.
 
-$$
-\operatorname{cosine}(a,b) =
-\frac{a \cdot b}{\|a\|_2 \|b\|_2}
-$$
+When embeddings are L2-normalized, each vector has a length of 1. Therefore, the cosine similarity formula simplifies to the dot product because the normalization factor equals 1.
 
-For L2-normalized vectors, both vectors have unit length:
+As a result, cosine similarity and dot product produce equivalent similarity scores and rankings for normalized embeddings, apart from minor floating-point differences.
 
-$$
-\|a\|_2 = \|b\|_2 = 1
-$$
+**Conclusion:** Normalization makes vector comparisons independent of magnitude and ensures consistent similarity rankings.
 
-Therefore:
-
-$$
-\boxed{\operatorname{cosine}(a,b) = a \cdot b}
-$$
 
 This means cosine similarity and dot product produce the same
 similarity scores and rankings for unit-length vectors, apart
 from minor floating-point differences.
 
-**Conclusion:** Normalization removes vector magnitude as a
-ranking factor, making cosine similarity equivalent to dot product.
-
-
-This means that cosine similarity and dot product produce the same similarity scores and rankings for unit-length vectors, apart from minor floating-point differences.
-
-**Conclusion:** Normalization removes vector magnitude as a ranking factor and makes cosine similarity equivalent to dot product. This allows consistent comparison of semantic similarity across the generated embeddings.
