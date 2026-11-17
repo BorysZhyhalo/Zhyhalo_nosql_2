@@ -168,3 +168,37 @@ Overlap repeats text between neighboring chunks, improving context preservation 
 ![Chunking results](output/05_chunking.png)
 
 Full output: `output/05_chunking_log.txt`
+
+## Part 5 — Hybrid Search
+
+### Implementation
+
+Implemented hybrid retrieval using local **BM25** and Pinecone vector search. The Top-20 candidates from each method are merged using **Reciprocal Rank Fusion (RRF)** with `k=60`.
+
+RRF combines document ranks instead of incompatible BM25 and cosine similarity scores.
+
+### Results
+
+| Query | BM25 | Vector Search | Hybrid RRF |
+|---|---|---|---|
+| BERT fine-tuning | Finds lexical matches, including unrelated uses of "fine-tuned" | Mostly weak matches | Combines results but remains limited in relevance |
+| Yann LeCun convolutional networks | Finds CNN-related papers | Finds related neural network research | Promotes papers retrieved by both methods |
+| Understanding human emotions from text | Relies on matching words | Finds depression, happiness, and sentiment papers | Combines lexical and semantic results |
+
+### Theoretical Questions
+
+**Q1. Which method performed better?**
+
+Results depended on query type. BM25 was useful for technical terminology, while vector search found related concepts without exact keyword matches. Hybrid search improved ranking agreement for the CNN query, but did not consistently outperform individual methods.
+
+**Q2. Can Hybrid Top-5 contain papers absent from both individual Top-5 lists?**
+
+Yes. For the CNN query, *Scale Space Approximation in Convolutional Neural Networks for Retinal Vessel Segmentation* appeared at Hybrid rank 3 despite being absent from both individual Top-5 lists. RRF considers the wider Top-20 candidate lists and rewards documents ranked by both methods.
+
+**Q3. How does the RRF parameter k affect rankings?**
+
+With `k=60`, differences between individual ranks have a smaller impact, favoring agreement across retrieval methods. With `k=1`, top-ranked documents receive substantially higher weight, making the final ranking more sensitive to the highest positions.
+
+### Execution Evidence
+
+Full output: `output/06_hybrid_search_log.txt`
